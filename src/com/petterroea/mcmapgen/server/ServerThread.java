@@ -61,7 +61,7 @@ public class ServerThread implements Runnable {
 			//Do stuff here
 			updateStatus();
 			//This calculates the time to sleep. This is to relax the server.
-			long timeLeft = 300 - (System.currentTimeMillis()-startTime);
+			long timeLeft = 3000 - (System.currentTimeMillis()-startTime);
 			if(timeLeft>0)
 			{
 				Util.sleep(timeLeft);
@@ -70,15 +70,9 @@ public class ServerThread implements Runnable {
 	}
 	public void updateStatus()
 	{
-		System.out.println("Regions done: " + regionsFinished + ", connected clients: " + clients.size() + ".\r");
+		System.out.println("Regions done: " + regionsFinished + ", connected clients: " + clients.size() + ".");
 		System.out.println("Region progress:");
-		for(int x = 0; x < settings.regionsx; x++)
-		{
-			for(int y = 0; y < settings.regionsy; y++)
-			{
-				
-			}
-		}
+		
 	}
 	private void acceptNewPeeps()
 	{
