@@ -1,7 +1,6 @@
 package com.petterroea.mcmapgen.client;
 
 import java.io.IOException;
-
 import com.petterroea.mcmapgen.McMapGen;
 
 public class FarmWizard {
@@ -25,5 +24,15 @@ public class FarmWizard {
 			handler = new SingleFarmHandler();
 		}
 		handler.setup();
+		if(thread!=null)
+		{
+			System.out.println("There allready exists a client thread :O");
+		}
+		else
+		{
+			thread = new Thread(new FarmThread(handler));
+			thread.start();
+		}
 	}
+	public static Thread thread;
 }
