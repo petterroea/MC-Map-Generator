@@ -1,6 +1,7 @@
 package com.petterroea.mcmapgen;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -19,7 +20,16 @@ public class Util {
 	{	
 		return (byte)((int)i+Byte.MIN_VALUE);
 	}
-
+	public static String getInput()
+	{
+		try {
+			return McMapGen.br.readLine();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "";
+	}
 	public static String getMD5(byte[] data) 
 	{
 		MessageDigest md5 = null;
@@ -60,6 +70,16 @@ public class Util {
 			e.printStackTrace();
 		}
 	}
+	public static int Max(int a, int b)
+	{
+		if(a>b) return a;
+		return b;
+	}
+	public static int Min(int a, int b)
+	{
+		if(a<b) return a;
+		return b;
+	}
 	public static String byteHex(byte b) {
 		 final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 		 char[] hexChars = new char[2];
@@ -76,5 +96,23 @@ public class Util {
 		col += c.getGreen();
 		col += c.getBlue();
 		return col/3;
+	}
+	/*
+	 * Stolen from http://www.minecraftwiki.net/wiki/Chunk_format
+	 */
+	public static byte Nibble4(byte[] arr, int index)
+	{ 
+		return (byte) (index%2 == 0 ? arr[index/2]&0x0F : (arr[index/2]>>4)&0x0F); 
+	}
+	//Converts byte to part of a byte. (Yo dawg...)
+	public static byte toNibble4(byte b, int index, byte in)
+	{
+		//First, divide the byte into two nibbles.
+		byte first = (byte) (b&0x0F);
+		byte last = (byte) ((b>>4)&0x0F);
+		//Choose which part we change
+		if(index%2==0) { first = (byte) (in&0x0F); } else { last = (byte) (in&0x0F); }
+		//Put the byte together again
+		return (byte) (first + (last << 4));
 	}
 }

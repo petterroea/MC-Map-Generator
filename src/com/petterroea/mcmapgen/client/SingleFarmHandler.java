@@ -9,11 +9,10 @@ import com.petterroea.mcmapgen.Region;
  *
  */
 public class SingleFarmHandler implements FarmHandler {
-
+	private MapGenSettings settings = null;
 	@Override
 	public void setup() {
-		// TODO Auto-generated method stub
-
+		
 	}
 
 	@Override
