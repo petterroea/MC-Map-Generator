@@ -1,11 +1,13 @@
 package com.petterroea.mcmapgen;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+
+import com.petterroea.gwg.GwgByteFile;
+import com.petterroea.gwg.GwgFile;
 
 /**
  * 
@@ -13,40 +15,55 @@ import javax.imageio.ImageIO;
  *
  */
 public class MapGenSettings {
-	public byte[] mapData;
 	public int mapw, maph;
-	public int regionsx, regionsy;
+	public int regionsx, regionsz;
+	public int spawnx, spawnz;
 	public boolean silent = false;
+	public boolean populate = false;
+	public GwgByteFile map;
+	public int waterHeight = 12;
 	public MapGenSettings(String mapGeometry)
 	{
-		BufferedImage map = null;
 		try {
-			map = ImageIO.read(new File(mapGeometry));
+			map = (GwgByteFile)GwgFile.load(new File(mapGeometry));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			System.exit(0);	
 		}
-		mapw = map.getWidth();
-		maph = map.getHeight();
-		mapData = new byte[mapw*maph];
-		System.out.println("Map data takes " + (int)((Byte.SIZE*mapData.length)/1000) + "kb in RAM");
+		mapw = (int) map.w;
+		maph = (int) map.h;
+		System.out.println("Map data takes " + (int)((Byte.SIZE*map.w*map.h)/1000L) + "kb in RAM");
 		regionsx = (mapw/512)+1;
-		regionsy = (maph/512)+1;
-		if(mapw%512==0) { regionsx--; }
-		if(maph%512==0) { regionsy--; }
-		System.out.println("Map will take " + (regionsx*regionsy) + " regions.");
-		System.out.println("Loading map...");
-		//Load map to bytes.
-		for(int xpos = 0; xpos < map.getWidth(); xpos++)
-		{
-			for(int ypos = 0; ypos < map.getHeight(); ypos++)
+		regionsz = (maph/512)+1;
+		//if(mapw%512==0) { regionsx--; }
+		//if(maph%512==0) { regionsz--; }
+		System.out.println("Map will take " + (regionsx*regionsz) + " regions.");
+		System.out.println("Now, where is the spawn? ");
+		String spawnxs = "";
+		String spawnzs = "";
+		try { 
+			while(spawnxs.equals("")||!Util.isInt(spawnxs))
 			{
-				mapData[xpos+(ypos*mapw)]=Util.toByte(Util.avColor(map.getRGB(xpos, ypos)));
+				System.out.print("X: ");
+				spawnxs = McMapGen.br.readLine();
 			}
+			while(spawnzs.equals("")||!Util.isInt(spawnzs))
+			{
+				System.out.print("Z: ");
+				spawnzs = McMapGen.br.readLine();
+			}
+			spawnx = Integer.parseInt(spawnxs);
+			spawnz = Integer.parseInt(spawnzs);
+		} catch(Exception e) {
+			e.printStackTrace();
 		}
-		//Map loaded.
-		System.out.println("Done.");
+		String wh = "";
+		while(wh.equals("")||!Util.isInt(wh))
+		{
+			System.out.print("Water height?: ");
+			wh = Util.getInput();
+		}
+		waterHeight = Integer.parseInt(wh);
 	}
 	public static MapGenSettings getSettings() {
 		boolean cont = true;

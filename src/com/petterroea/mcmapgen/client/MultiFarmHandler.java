@@ -17,12 +17,6 @@ public class MultiFarmHandler implements FarmHandler {
 	}
 
 	@Override
-	public void regionDone() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
 	public Region getRegionToHandle() {
 		// TODO Auto-generated method stub
 		return null;
@@ -38,6 +32,12 @@ public class MultiFarmHandler implements FarmHandler {
 	public MapGenSettings getSettings() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void doneGenerating() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

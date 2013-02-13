@@ -1,13 +1,26 @@
 package com.petterroea.mcmapgen;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+
+import com.petterroea.nbt.Tag;
+import com.petterroea.nbt.TagByte;
+import com.petterroea.nbt.TagByteArray;
+import com.petterroea.nbt.TagCompound;
+import com.petterroea.nbt.TagInt;
+import com.petterroea.nbt.TagIntArray;
+import com.petterroea.nbt.TagList;
+import com.petterroea.nbt.TagLong;
+
 public class Chunk {
 	byte[] blocks = new byte[16*16*256]; //Done
 	byte[] add = new byte[(16*16*256)/2]; //Done
 	byte[] data = new byte[(16*16*256)/2]; //Done
 	byte[] blockLight = new byte[(16*16*256)/2]; //Done
 	byte[] skyLight = new byte[(16*16*256)/2]; //Done
-	byte[] heightMap = new byte[16*16]; //Implemented.
+	int[] heightMap = new int[16*16]; //Implemented.
 	byte[] biome = new byte[16*16]; //Implemented
+	int chunkx, chunkz;
 	public enum Biome{
 		OCEAN,
 		PLAINS,
@@ -33,8 +46,10 @@ public class Chunk {
 		JUNGLE,
 		JUNGLE_HILLS
 	}
-	public Chunk()
+	public Chunk(int chunkx, int chunkz)
 	{
+		this.chunkx = chunkx;
+		this.chunkz = chunkz;
 		for(int i = 0; i < biome.length; i++)
 		{
 			biome[i]=1;
@@ -83,7 +98,7 @@ public class Chunk {
 	public void setBlock(int x, int y, int z, int id)
 	{
 		if(id>4096) id=4096;
-		int blockPos = y*16*16 + z*16 + x;
+		int blockPos = (y*16*16) + (z*16) + x;
 		blocks[blockPos] = (byte) (id&0xFF);
 		add[blockPos/2] = Util.toNibble4(add[blockPos/2], blockPos, (byte) (id >> 8));
 	}
@@ -123,5 +138,83 @@ public class Chunk {
 	{
 		int blockPos = y*16*16 + z*16 + x;
 		return Util.Nibble4(blockLight, blockPos);
+	}
+	public TagCompound getTagCompound(MapGenSettings settings)
+	{
+		TagCompound tag = new TagCompound("");
+		TagCompound level = new TagCompound("Level");
+		//Level
+			if(settings.populate)
+			{
+				level.put(new TagByte("TerrainPopulated", (byte)1));
+			}
+			else
+			{
+				level.put(new TagByte("TerrainPopulated", (byte)0));
+			}
+			level.put(new TagInt("xPos", chunkx));
+			level.put(new TagInt("zPos", chunkz));
+			level.put(new TagLong("LastUpdate", System.currentTimeMillis()));
+			level.put(new TagByteArray("Biomes", biome));
+			level.put(new TagList<TagCompound>("Entities"));
+			level.put(getSections());
+			level.put(new TagList<TagCompound>("TileEntities"));
+			level.put(new TagIntArray("HeightMap", heightMap));
+		tag.put("Level", level);
+		//tag.print(0);
+		return tag;
+	}
+	private TagList getSections()
+	{
+		TagList<TagCompound> list = new TagList<TagCompound>("Sections");
+		for(int ypos = 0; ypos < 16; ypos++)
+		{
+			TagCompound compound = new TagCompound("");
+			compound.put(new TagByte("Y", (byte)ypos));
+			byte[] tempBlockLight = new byte[16*16*8];
+			for(int a = 0; a < 16*16*8; a++)
+			{
+				tempBlockLight[a]=blockLight[a+(ypos*16*8*16)];
+			}
+			compound.put(new TagByteArray("BlockLight", tempBlockLight));
+			byte[] tempBlockData = new byte[16*16*16];
+			for(int a = 0; a < 16*16*16; a++)
+			{
+				tempBlockData[a]=blocks[a+(ypos*16*16*16)];
+			}
+			compound.put(new TagByteArray("Blocks", tempBlockData));
+			byte[] tempAdd = new byte[16*16*8];
+			for(int a = 0; a < 16*16*8; a++)
+			{
+				tempAdd[a] = add[a+(ypos*16*8*16)];
+			}
+			compound.put(new TagByteArray("Add", tempAdd));
+			byte[] tempData = new byte[16*16*8];
+			for(int a = 0; a < 16*16*8; a++)
+			{
+				tempData[a] = data[a+(ypos*16*8*16)];
+			}
+			compound.put(new TagByteArray("Data", tempData));
+			byte[] tempSkyLight = new byte[16*16*8];
+			for(int a = 0; a < 16*16*8; a++)
+			{
+				tempSkyLight[a] = skyLight[a+(ypos*16*8*16)];
+			}
+			compound.put(new TagByteArray("SkyLight", tempSkyLight));
+			list.add(compound);
+		}
+		return list;
+	}
+	public ByteArrayOutputStream getData(MapGenSettings settings) {
+		try {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			TagCompound compound = getTagCompound(settings);
+			//compound.print(0);
+			Tag.writeDeflated(new DataOutputStream(bos), compound);
+			return bos;
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

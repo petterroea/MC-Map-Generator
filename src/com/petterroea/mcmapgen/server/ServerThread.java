@@ -42,7 +42,7 @@ public class ServerThread implements Runnable {
 			sSChannel.socket().bind(new InetSocketAddress(iAddr, port));
 			System.out.println("Bound IP");
 			readSelector = Selector.open();
-			regions = new boolean[settings.regionsx*settings.regionsy];
+			regions = new boolean[settings.regionsx*settings.regionsz];
 		} catch(IOException e) {
 			System.out.println("ERROR: Could not bind IP");
 			System.exit(0);

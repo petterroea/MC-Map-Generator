@@ -15,7 +15,18 @@ public class Util {
 		}
 		return true;
 	}
-
+	public static String getTimeString(long seconds)
+	{
+		String str = "";
+		int days = (int) (seconds/86400L);
+		int rest = (int) (seconds%86400L);
+		int hours = rest/3600;
+		rest = rest%3600;
+		int minutes = rest / 60;
+		int secondsLeft = rest % 60;
+		str = str + (int)days + "d, " + (int)hours + "h, " + (int)minutes + "m, " + (int)secondsLeft + "s";
+ 		return str;
+	}
 	public static byte toByte(int i) 
 	{	
 		return (byte)((int)i+Byte.MIN_VALUE);
@@ -114,5 +125,14 @@ public class Util {
 		if(index%2==0) { first = (byte) (in&0x0F); } else { last = (byte) (in&0x0F); }
 		//Put the byte together again
 		return (byte) (first + (last << 4));
+	}
+	public static boolean yn() {
+		String in = "";
+		while(!in.equalsIgnoreCase("y")&&!in.equalsIgnoreCase("n"))
+		{
+			in = getInput();
+		}
+		if(in.equalsIgnoreCase("y")) return true;
+		return false;
 	}
 }
