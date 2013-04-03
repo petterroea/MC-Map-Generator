@@ -129,7 +129,7 @@ public class Region {
 //						if((x<(16*32)-1||regionx<settings.regionsx-1)&&(z>0||regionz>0)) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
 //						height = (int)((float)sampledHeight/(float)samples);
 //					}
-					if(settings.smooth) { height = interpolate((x+(regionx*32*16)), (z+(regionz*32*15)), height, settings.smoothSize, settings); }
+					if(settings.smooth) { height = interpolate((x+(regionx*32*16)), (z+(regionz*32*15)), settings.smoothSize, height, settings); }
 					int biome = settings.biomeMap.getBiome((int)(x+(regionx*32*16)), (int)(z+(regionz*32*15)));
 					chunks[getChunkIndex(x, z)].setBiome(x%16, z%16, Chunk.values[biome]);
 					for(int y = 0; y < 256; y++)
@@ -153,47 +153,43 @@ public class Region {
 		}
 		TerrainPopulator.populateRegion(this, settings);
 	}
+	int[] interpolationRange; //Variable to store points to take into count when interpolating
 	public int interpolate(int x, int z, int size, int height, MapGenSettings settings)
 	{
+		if(size<1) return 69;
+		if(interpolationRange==null)
+		{
+			//Find the size of interpolation area
+			int widthVariable = 1;
+			for(int i = 1; i < size; i++)
+			{
+				widthVariable = widthVariable+2;
+			}
+			//We have to generate the interpolation points
+			interpolationRange = new int[widthVariable*widthVariable*2];
+			for(int genX = 0; genX < widthVariable; genX++)
+			{
+				for(int genY = 0; genY < widthVariable; genY++)
+				{
+					interpolationRange[(genX+(genY*widthVariable))*2+0] = genX-(widthVariable/2);
+					interpolationRange[(genX+(genY*widthVariable))*2+1] = genY-(widthVariable/2);
+				}
+			}
+		}
 		int samples = 0;
 		int sampled = 0;
-		if(size<1) return 69;
-		for(int layer = 1; layer < size+1; layer++)
+		for(int i = 0; i < interpolationRange.length/2; i++)
 		{
-			int wallWidth = ((layer-1)*2)+1; //Width of walls excluding corners
-			//Corners
-			if((x-layer>=0)&&(z-layer>=0)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Top left
-			if((x+layer<settings.mapw)&&(z-layer>=0)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Top right
-			if((x+layer<settings.mapw)&&(z+layer<settings.maph)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Bottom right
-			if((x-layer>=0)&&(z+layer<settings.maph)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Bottom left
-			//Walls
-			//Top wall
-			for(int i = 0; i < wallWidth; i++)
-			{
-				if((z-layer>=0)&&(z+layer<settings.maph)&&(x-layer+i>=0)&&(x+layer+i<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer+i)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
-			}
-			//Bottom wall
-			for(int i = 0; i < wallWidth; i++)
-			{
-				if((z-layer>=0)&&(z+layer<settings.maph)&&(x-layer+i>=0)&&(x+layer+i<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer+i)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
-			}
-			//Left wall
-			for(int i = 0; i < wallWidth; i++)
-			{
-				if((z-layer+i>=0)&&(z+layer+i<settings.maph)&&(x-layer>=0)&&(x+layer<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer+i)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
-			}
-			//Right wall
-			for(int i = 0; i < wallWidth; i++)
-			{
-				if((z-layer+i>=0)&&(z+layer+i<settings.maph)&&(x-layer>=0)&&(x+layer<settings.mapw)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer+i)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
-			}
+			int xPos = x+interpolationRange[(i*2)+0];
+			int yPos = z+interpolationRange[(i*2)+1];
+			if(xPos<0||yPos<0||xPos>=settings.mapw||yPos>=settings.maph) continue;
+			sampled += settings.map.get((long)(((float)(xPos)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(yPos)/(float)(settings.maph+1))*(float)(settings.map.h))); 
+			samples++; 
 		}
 		int toAdd = samples/3;
-		for(int i = 0; i < toAdd; i++)
-		{
-			sampled += height;
-			samples++;
-		}
+		sampled += (height*toAdd);
+		samples += toAdd;
+		
 		return sampled/samples;
 	}
 	/*
