@@ -2,8 +2,14 @@ package com.petterroea.mcmapgen;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+
+import net.minecraft.world.level.chunk.storage.RegionFile;
 
 import com.petterroea.mcmapgen.Chunk.Biome;
+import com.petterroea.mcmapgen.client.SingleFarmHandler;
+import com.petterroea.nbt.Tag;
 
 public class Region {
 	public Chunk[] chunks;
@@ -20,6 +26,10 @@ public class Region {
 			chunks[i] = new Chunk((i%32)+(regionx*32), (i/32)+(regionz*32));
 		}
 	}
+	public File getRegionFile()
+	{
+		return new File(SingleFarmHandler.saveFolder, "/region/" + "r." + regionx + "." + regionz + ".mca");
+	}
 	public byte[] getBytes(MapGenSettings settings)
 	{
 		try{
@@ -32,7 +42,7 @@ public class Region {
 				streams[i] = chunks[i].getData(settings);
 				int toHeader = 0;
 				int sectorsUsed = ((streams[i].size()+HEADER_SIZE)/SECTOR_SIZE)+1;
-				System.out.println("Offset: " + offset);
+				//System.out.println("Offset: " + offset);
 				toHeader = (int) (((int)offset<<8)+(sectorsUsed&0xFF));
 				offset += sectorsUsed;
 				header[i] = toHeader;
@@ -71,20 +81,63 @@ public class Region {
 		}
 		return null;
 	}
+	public void tempGenerate(File regionFile, MapGenSettings settings)
+	{
+		RegionFile file = new RegionFile(regionFile); //Cheating^^
+		for(int i = 0; i < chunks.length; i++)
+		{
+			DataOutputStream chunkDataOutputStream = file.getChunkDataOutputStream(i%32, i/32);
+			Tag.write(chunkDataOutputStream, chunks[i].getTagCompound(settings));
+			try {
+				chunkDataOutputStream.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try {
+			file.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	public void generate(MapGenSettings settings) 
 	{
 		for(int x = 0; x < 16*32; x++)
 		{
 			for(int z = 0; z < 16*32; z++)
 			{
-				if(x+(regionx*32*16)<settings.map.w&&z+(regionz*32*16)<settings.map.h)
+				float posScaledX = (float)(x+(regionx*32*16))/(float)(settings.mapw+1);
+				float posScaledZ = (float)(z+(regionz*32*15))/(float)(settings.maph+1);
+				if((x+(regionx*32*16))<settings.mapw&&(z+(regionz*32*15))<settings.maph)
 				{
-					int height = settings.map.get(x+(regionx*32*16), z+(regionz*32*16))&0xFF;
+					int height = settings.map.get((long)(posScaledX*(float)(settings.map.w-1)), (long)(posScaledZ*(float)(settings.map.h-1)))&0xFF;
+					//Thanks to hanna, here is some code to "smooth" height based on neighbour blocks.
+//					if(settings.smooth)
+//					{
+//						int samples = 0;
+//						int sampledHeight = 0;
+//						//Start sampling.
+//						if(x>0||regionx>0) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if(z>0||regionz>0) { sampledHeight += settings.map.get((long)((float)(x+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if((x>0||regionx>0)&&(z>0||regionz>0)) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if((x>0||regionx>0)&&(z<(16*32)-1||regionz<settings.regionsz-1)) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if(z<(16*32)-1||regionz<settings.regionsz-1) { sampledHeight += settings.map.get((long)((float)(x+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if((x<(16*32)-1||regionx<settings.regionsx-1)&&(z<(16*32)-1||regionz<settings.regionsz-1)) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if(x<(16*32)-1||regionx<settings.regionsx-1) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						if((x<(16*32)-1||regionx<settings.regionsx-1)&&(z>0||regionz>0)) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
+//						height = (int)((float)sampledHeight/(float)samples);
+//					}
+					if(settings.smooth) { height = interpolate((x+(regionx*32*16)), (z+(regionz*32*15)), height, settings.smoothSize, settings); }
+					int biome = settings.biomeMap.getBiome((int)(x+(regionx*32*16)), (int)(z+(regionz*32*15)));
+					chunks[getChunkIndex(x, z)].setBiome(x%16, z%16, Chunk.values[biome]);
 					for(int y = 0; y < 256; y++)
 					{
-						if(y==height) chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 2);
-						if(y<height) chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 1);
-						if(y>height) { if(y<=settings.waterHeight) {  chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 8); } else {chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 0); } }
+						if(y==0) { chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 7); }
+						else if(y<=height&&y>=height-6) { chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, Chunk.getTopCoverId(biome, height-y, y<=settings.waterHeight)); }
+						else if(y<height) chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 1);
+						else if(y>height) { if(y<=settings.waterHeight) {  if(y==settings.waterHeight&&biome==10){ chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 79); } else {chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 9); chunks[getChunkIndex(x, z)].setBiome(x%16, z%16, Biome.OCEAN);}} else {chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 0); } }
 						//chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 1);
 					}
 				}
@@ -98,6 +151,50 @@ public class Region {
 				}
 			}
 		}
+		TerrainPopulator.populateRegion(this, settings);
+	}
+	public int interpolate(int x, int z, int size, int height, MapGenSettings settings)
+	{
+		int samples = 0;
+		int sampled = 0;
+		if(size<1) return 69;
+		for(int layer = 1; layer < size+1; layer++)
+		{
+			int wallWidth = ((layer-1)*2)+1; //Width of walls excluding corners
+			//Corners
+			if((x-layer>=0)&&(z-layer>=0)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Top left
+			if((x+layer<settings.mapw)&&(z-layer>=0)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Top right
+			if((x+layer<settings.mapw)&&(z+layer<settings.maph)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Bottom right
+			if((x-layer>=0)&&(z+layer<settings.maph)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++;} //Bottom left
+			//Walls
+			//Top wall
+			for(int i = 0; i < wallWidth; i++)
+			{
+				if((z-layer>=0)&&(z+layer<settings.maph)&&(x-layer+i>=0)&&(x+layer+i<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer+i)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z-layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
+			}
+			//Bottom wall
+			for(int i = 0; i < wallWidth; i++)
+			{
+				if((z-layer>=0)&&(z+layer<settings.maph)&&(x-layer+i>=0)&&(x+layer+i<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer+i)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
+			}
+			//Left wall
+			for(int i = 0; i < wallWidth; i++)
+			{
+				if((z-layer+i>=0)&&(z+layer+i<settings.maph)&&(x-layer>=0)&&(x+layer<settings.mapw)) { sampled += settings.map.get((long)(((float)(x-layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer+i)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
+			}
+			//Right wall
+			for(int i = 0; i < wallWidth; i++)
+			{
+				if((z-layer+i>=0)&&(z+layer+i<settings.maph)&&(x-layer>=0)&&(x+layer<settings.mapw)) { sampled += settings.map.get((long)(((float)(x+layer)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(z+layer+i)/(float)(settings.maph+1))*(float)(settings.map.h))); samples++; }
+			}
+		}
+		int toAdd = samples/3;
+		for(int i = 0; i < toAdd; i++)
+		{
+			sampled += height;
+			samples++;
+		}
+		return sampled/samples;
 	}
 	/*
 	 * Helpers for block placement. They take region-local coordinates and target the right chunk with the right local coordinates.

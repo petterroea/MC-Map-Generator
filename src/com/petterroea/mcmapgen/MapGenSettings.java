@@ -21,7 +21,12 @@ public class MapGenSettings {
 	public boolean silent = false;
 	public boolean populate = false;
 	public GwgByteFile map;
+	public BiomeMap biomeMap;
 	public int waterHeight = 12;
+	public boolean smooth = true;
+	float scale = 1.0f;
+	public int smoothSize = 1;
+	float oreGenerationRate = 1.0f;
 	public MapGenSettings(String mapGeometry)
 	{
 		try {
@@ -30,9 +35,43 @@ public class MapGenSettings {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		mapw = (int) map.w;
-		maph = (int) map.h;
-		System.out.println("Map data takes " + (int)((Byte.SIZE*map.w*map.h)/1000L) + "kb in RAM");
+		System.out.println("Do you want the map at original scale");
+		if(Util.yn())
+		{
+			System.out.println("Ok. Setting scale to 1.0");
+			scale = 1.0f;
+		}
+		else
+		{
+			String sc = "";
+			while(sc.equals("")||!Util.isFloat(sc))
+			{
+				System.out.println("Ok, what do you want the scale to be?");
+				sc = Util.getInput();
+			}
+			scale = Float.parseFloat(sc);
+			System.out.println("Set scale to " + scale);
+		}
+		System.out.println("Do you want more or less ores? No is good for single player, but you may want to say yes if you know a lot of people are going to play on the map.");
+		if(Util.yn())
+		{
+			String gr = "emm";
+			while(gr.equals("")||!Util.isFloat(gr))
+			{
+				System.out.println("Ok, what do you want the ore generation rate to be?");
+				gr = Util.getInput();
+			}
+			oreGenerationRate = Float.parseFloat(gr);
+			System.out.println("Set ore generation rate to " + oreGenerationRate);
+		}
+		else
+		{
+			System.out.println("Ok! Ore generation rate set to 1.0");
+			oreGenerationRate = 1.0f;
+		}
+		mapw = (int) ((float)map.w*scale);
+		maph = (int) ((float)map.h*scale);
+		System.out.println("Map data takes " + (int)((Byte.SIZE*mapw*maph)/1000L) + "kb in RAM");
 		regionsx = (mapw/512)+1;
 		regionsz = (maph/512)+1;
 		//if(mapw%512==0) { regionsx--; }
@@ -64,6 +103,13 @@ public class MapGenSettings {
 			wh = Util.getInput();
 		}
 		waterHeight = Integer.parseInt(wh);
+		biomeMap = new BiomeMap(this);
+		System.out.println("Whan you scale maps down, they can become very choppy. This also can happen with some maps at original size. Do you want to try to smooth the landscape?");
+		smooth = Util.yn();
+		if(smooth)
+		{
+			smoothSize = Util.getIntFromInput("How big do you want the range of the smoothing to be(Default 2)");
+		}
 	}
 	public static MapGenSettings getSettings() {
 		boolean cont = true;

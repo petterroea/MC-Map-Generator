@@ -20,11 +20,12 @@ public class FarmThread implements Runnable {
 			if(processed%4==0)
 			{
 				System.out.println("Uptime: " + Util.getTimeString((System.currentTimeMillis()-startTime)/1000));
-				int toDo = (handler.getSettings().regionsx*handler.getSettings().regionsz);
-				System.out.println("Regions processed: " + processed + "/" + toDo + "(" + (((float)processed/(float)toDo)*100.0f) + "%)");
+				//int toDo = (handler.getSettings().regionsx*handler.getSettings().regionsz);
+				System.out.println("Regions processed: " + processed + "/" + SingleFarmHandler.toDo + "(" + (((float)processed/(float)SingleFarmHandler.toDo)*100.0f) + "%)");
 			}
 			region.generate(handler.getSettings());
-			handler.sendRegion(region);
+			//handler.sendRegion(region);
+			region.tempGenerate(region.getRegionFile(), handler.getSettings());
 			region = null;
 			long timeToGenerate = System.currentTimeMillis()-regionStartTime;
 			processed++;

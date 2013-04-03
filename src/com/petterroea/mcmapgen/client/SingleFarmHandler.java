@@ -9,12 +9,7 @@ import java.io.IOException;
 import com.petterroea.mcmapgen.MapGenSettings;
 import com.petterroea.mcmapgen.Region;
 import com.petterroea.mcmapgen.Util;
-import com.petterroea.nbt.Tag;
-import com.petterroea.nbt.TagByte;
-import com.petterroea.nbt.TagCompound;
-import com.petterroea.nbt.TagInt;
-import com.petterroea.nbt.TagLong;
-import com.petterroea.nbt.TagString;
+import com.petterroea.nbt.*;
 
 /**
  * Handler used when handling local generation
@@ -24,7 +19,7 @@ import com.petterroea.nbt.TagString;
 public class SingleFarmHandler implements FarmHandler {
 	private MapGenSettings settings = null;
 	boolean[] regions;
-	File saveFolder;
+	public static File saveFolder;
 	//For level.dat
 	public byte hardcore = (byte)0;
 	public byte features = (byte)0;
@@ -33,15 +28,49 @@ public class SingleFarmHandler implements FarmHandler {
 	public int gameType = 0;
 	public byte allowCommands = (byte)1;
 	public String levelName = "UNTITLED";
+	public static int toDo = 0;
 	@Override
 	public void setup() {
 		System.out.println("What is the path to the map file?");
 		String path = Util.getInput();
 		settings = new MapGenSettings(path);
+		System.out.println("Do you want to do the whole thing?");
+		int rangeStart = 0;
+		int rangeEnd = settings.regionsx*settings.regionsz;
+		if(!Util.yn())
+		{
+			String rs = "";
+			while(rs.equals("")||!Util.isInt(rs))
+			{
+				System.out.println("Ok. What is the start number of chunks?");
+				rs = Util.getInput();
+			}
+			String re = "";
+			while(re.equals("")||!Util.isInt(re))
+			{
+				System.out.println("What is the end index?(i < End index)");
+				re = Util.getInput();
+			}
+			rangeStart = Integer.parseInt(rs);
+			rangeEnd = Integer.parseInt(re);
+			toDo = rangeEnd-rangeStart;
+		}
+		else
+		{
+			System.out.println("Ok!");
+			toDo = settings.regionsx*settings.regionsz;
+		}
 		regions = new boolean[settings.regionsx*settings.regionsz];
 		for(int i = 0; i < regions.length; i++)
 		{
-			regions[i] = false;
+			if(i>=rangeStart&&i<rangeEnd)
+			{
+				regions[i] = false;
+			}
+			else
+			{
+				regions[i] = true;
+			}
 		}
 		System.out.println("Set up regions.");
 		String in = "";
@@ -104,16 +133,15 @@ public class SingleFarmHandler implements FarmHandler {
 	@Override
 	public void sendRegion(Region region) {
 		try {
-		File regionFile = new File(saveFolder, "/region/" + "r." + region.regionx + "." + region.regionz + ".mca");
+		
 		byte[] bytes = region.getBytes(settings);
-		DataOutputStream dos = new DataOutputStream(new FileOutputStream(regionFile));
+		DataOutputStream dos = new DataOutputStream(new FileOutputStream(region.getRegionFile()));
 		dos.write(bytes);
 		dos.close();
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
-
 	@Override
 	public MapGenSettings getSettings() {
 		// TODO Auto-generated method stub
@@ -164,6 +192,51 @@ public class SingleFarmHandler implements FarmHandler {
 			gamerules.put(new TagString("keepInventory", "true"));
 			gamerules.put(new TagString("mobGriefing", "true"));
 		data.put(gamerules);
+		//Player data. Copypaste from old project.
+		TagCompound player = new TagCompound("Player");
+		TagList<TagDouble> motion = new TagList<TagDouble>("Motion");
+		motion.add(new TagDouble("", 0.0));
+		motion.add(new TagDouble("", 0.0));
+		motion.add(new TagDouble("", 0.0));
+		player.put("Motion", motion);
+		player.put("foodExhaustionLevel", new TagFloat("foodExhaustionLevel", 0.0f));
+		player.put("foodTickTimer", new TagInt("foodTickTimer", 0));
+		player.put("PersistentId", new TagInt("PersistentId", 814667874));
+		player.put("XpLevel", new TagInt("XpLevel", 0));
+		player.put("Health", new TagShort("Health", (short)19));
+		player.put("Inventory", new TagList<TagByte>("Inventory"));
+		player.put("AttackTime", new TagShort("AttackTime", (short)0));
+		player.put("Sleeping", new TagByte("Sleeping", (byte)0));
+		player.put("Fire", new TagShort("Fire", (short)-20));
+		player.put("foodLevel", new TagInt("foodLevel", 20));
+		player.put("Score", new TagInt("Score", 0));
+		player.put("DeathTime", new TagShort("DeathTime", (short)0));
+		player.put("XpP", new TagFloat("XpP", 0.0f));
+		player.put("SleepTimer", new TagShort("SleepTimer", (short)0));
+		player.put("HurtTime", new TagShort("HurtTime", (short)0));
+		player.put("OnGround", new TagByte("OnGround", (byte)1));
+		player.put("Dimension", new TagInt("Dimension", 0));
+		player.put("Air", new TagShort("Air", (short)300));
+		TagList<TagDouble> pos = new TagList<TagDouble>("Pos");
+		pos.add(new TagDouble("", settings.spawnx));
+		pos.add(new TagDouble("", 255));
+		pos.add(new TagDouble("", settings.spawnz));
+		player.put("Pos", pos);
+		player.put("foodSaturationLevel", new TagFloat("foodSaturationLevel", 0.0f));
+		TagCompound abilities = new TagCompound("abilities");
+			player.put("flying", new TagByte("flying", (byte)1));
+			player.put("mayfly", new TagByte("mayfly", (byte)1));
+			player.put("instabuild", new TagByte("instabuild", (byte)1));
+			player.put("invulnerable", new TagByte("invulnerable", (byte)1));
+		player.put("abilities", abilities);
+		player.put("FallDistance", new TagFloat("FallDistance", 0.0f));
+		player.put("XpTotal", new TagInt("XpTotal", 0));
+		TagList<TagFloat> rot = new TagList<TagFloat>("Rotation");
+			rot.add(new TagFloat("", 0.0f));
+			rot.add(new TagFloat("", 0.0f));
+		player.put("Rotation", rot);
+		
+		data.put(player);
 		//Put the data tag in root
 		root.put(data);
 		try {

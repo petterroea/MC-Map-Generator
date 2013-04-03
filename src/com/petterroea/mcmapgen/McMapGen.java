@@ -10,7 +10,7 @@ import com.petterroea.mcmapgen.server.ServerWizard;
 
 public class McMapGen {
 	public static BufferedReader br;
-	public final static String VERSION = "0.0.1";
+	public final static String VERSION = "1.1.0";
 	public static void main(String[] args) {
 		br = new BufferedReader(new InputStreamReader(System.in));
 		System.out.println("===McMapGen " + VERSION + "===");

@@ -21,6 +21,7 @@ public class Chunk {
 	int[] heightMap = new int[16*16]; //Implemented.
 	byte[] biome = new byte[16*16]; //Implemented
 	int chunkx, chunkz;
+	public static Biome[] values = Biome.values();
 	public enum Biome{
 		OCEAN,
 		PLAINS,
@@ -46,6 +47,49 @@ public class Chunk {
 		JUNGLE,
 		JUNGLE_HILLS
 	}
+	public static int[] tallGrassPerRegion = {
+			0, //Ocean
+			((16*16)-16)*32*32, //Plains
+			(16)*32*32, //Desert
+			((16*16)-(16*12))*32*32, //Extreme hills
+			((16*16)-(16*4))*32*32, //Forest
+			((16*16)-(16*4))*32*32, //Taiga
+			((16*16)-(16*8))*32*32, //Swamp
+			0, //River
+			0, //Nether
+			0, //End
+			0, //Frozen Ocean
+			0, //Frozen River
+			0, //Ice plains
+			0, //Ice mountains
+			0, //Mushroom Island
+			0, //Mushroom island shore
+			0, //Beach
+			(16)*32*32, //Desert hills
+			((16*16)-(16*10))*32*32, //Forest hills
+			((16*16)-(16*10))*32*32, //Taiga hills
+			((16*16)-(16*12))*32*32, //Extreme hills edge
+			((16*16)-(16*4))*32*32, //Jungle
+			((16*16)-(16*10))*32*32, //Jungle hills
+	};
+	public static int getTopCoverId(int biome, int yFromTop, boolean underWater)
+	{
+		switch(biome)
+		{
+		case 2:
+			if(yFromTop<4) { return 12; } else { return 24; }
+		case 16:
+			if(yFromTop<4) { return 12; } else { return 24; }
+		case 17:
+			if(yFromTop<4) { return 12; } else { return 24; }
+		case 12:
+			if(underWater) { return 79; } else { if(yFromTop==0) { return 78; } else if(yFromTop<3) { return 79; } else { return 79; } }
+		case 13:
+			if(underWater) { return 79; } else { if(yFromTop==0) { return 78; } else if(yFromTop<3) { return 79; } else { return 79; } }
+		default:
+			if(yFromTop==0) { return 2; } else { return 3; }
+		}
+	}
 	public Chunk(int chunkx, int chunkz)
 	{
 		this.chunkx = chunkx;
@@ -53,6 +97,14 @@ public class Chunk {
 		for(int i = 0; i < biome.length; i++)
 		{
 			biome[i]=1;
+		}
+		for(int i = 0; i < skyLight.length; i++)
+		{
+			skyLight[i] = (byte)((int)255);
+		}
+		for(int i = 0; i < blockLight.length; i++)
+		{
+			blockLight[i] = (byte)((int)255);
 		}
 	}
 	public void generateHeightMap()
@@ -74,7 +126,7 @@ public class Chunk {
 	}
 	public Biome getBiomeAt(int x, int z)
 	{
-		return Biome.values()[biome[x+z*16]];
+		return values[biome[x+z*16]];
 	}
 	public void setBiome(int x, int z, Biome b)
 	{
@@ -146,12 +198,13 @@ public class Chunk {
 		//Level
 			if(settings.populate)
 			{
-				level.put(new TagByte("TerrainPopulated", (byte)1));
+				//level.put(new TagByte("TerrainPopulated", (byte)1));
 			}
 			else
 			{
-				level.put(new TagByte("TerrainPopulated", (byte)0));
+				//level.put(new TagByte("TerrainPopulated", (byte)0));
 			}
+			level.put(new TagByte("TerrainPopulated", (byte)1));
 			level.put(new TagInt("xPos", chunkx));
 			level.put(new TagInt("zPos", chunkz));
 			level.put(new TagLong("LastUpdate", System.currentTimeMillis()));

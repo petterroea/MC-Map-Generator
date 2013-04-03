@@ -15,6 +15,7 @@ public class Util {
 		}
 		return true;
 	}
+	
 	public static String getTimeString(long seconds)
 	{
 		String str = "";
@@ -40,6 +41,16 @@ public class Util {
 			e.printStackTrace();
 		}
 		return "";
+	}
+	public static int getIntFromInput(String query)
+	{
+		String str = "";
+		while(str.equals("")||!isInt(str))
+		{
+			System.out.println(query);
+			str = getInput();
+		}
+		return Integer.parseInt(str);
 	}
 	public static String getMD5(byte[] data) 
 	{
@@ -134,5 +145,14 @@ public class Util {
 		}
 		if(in.equalsIgnoreCase("y")) return true;
 		return false;
+	}
+
+	public static boolean isFloat(String sc) {
+		try {
+			float f = Float.parseFloat(sc);
+		} catch(Exception e) {
+			return false;
+		}
+		return true;
 	}
 }
