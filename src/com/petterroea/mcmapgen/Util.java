@@ -15,7 +15,14 @@ public class Util {
 		}
 		return true;
 	}
-	
+	public static int uByteToSignedInt(byte b)
+	{
+		boolean isNegative = b<(byte)0;
+		byte masked = (byte) (b & 0x7F);
+		int i = (int)masked;
+		if(isNegative) i += 128;
+		return i;
+	}
 	public static String getTimeString(long seconds)
 	{
 		String str = "";

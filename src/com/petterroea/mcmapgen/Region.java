@@ -14,6 +14,10 @@ import com.petterroea.nbt.Tag;
 public class Region {
 	public Chunk[] chunks;
 	public int regionx, regionz;
+	public boolean[] placedAreas; //For more intelligent tree placement, this holds 2d collision between trees, and mabe houses in  the future.
+	public boolean[] placedBoxes; //Same, but this one is the box around the entire object
+	public int[] heightmap;
+	public int[] biomes;
 	public static int SECTOR_SIZE=4096;
 	public static int HEADER_SIZE=5;
 	public Region(int regionx, int regionz)
@@ -21,6 +25,10 @@ public class Region {
 		this.regionx = regionx;
 		this.regionz = regionz;
 		chunks = new Chunk[32*32];
+		placedAreas = new boolean[16*16*32*32];
+		placedBoxes = new boolean[16*16*32*32];
+		heightmap = new int[16*16*32*32];
+		biomes = new int[16*16*32*32];
 		for(int i = 0; i < 32*32; i++)
 		{
 			chunks[i] = new Chunk((i%32)+(regionx*32), (i/32)+(regionz*32));
@@ -104,42 +112,35 @@ public class Region {
 	}
 	public void generate(MapGenSettings settings) 
 	{
+		TerrainPopulator populator = new TerrainPopulator();
 		for(int x = 0; x < 16*32; x++)
 		{
 			for(int z = 0; z < 16*32; z++)
 			{
 				float posScaledX = (float)(x+(regionx*32*16))/(float)(settings.mapw+1);
-				float posScaledZ = (float)(z+(regionz*32*15))/(float)(settings.maph+1);
-				if((x+(regionx*32*16))<settings.mapw&&(z+(regionz*32*15))<settings.maph)
+				float posScaledZ = (float)(z+(regionz*32*16))/(float)(settings.maph+1);
+				if((x+(regionx*32*16))<settings.mapw&&(z+(regionz*32*16))<settings.maph)
 				{
-					int height = settings.map.get((long)(posScaledX*(float)(settings.map.w-1)), (long)(posScaledZ*(float)(settings.map.h-1)))&0xFF;
-					//Thanks to hanna, here is some code to "smooth" height based on neighbour blocks.
-//					if(settings.smooth)
-//					{
-//						int samples = 0;
-//						int sampledHeight = 0;
-//						//Start sampling.
-//						if(x>0||regionx>0) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if(z>0||regionz>0) { sampledHeight += settings.map.get((long)((float)(x+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if((x>0||regionx>0)&&(z>0||regionz>0)) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if((x>0||regionx>0)&&(z<(16*32)-1||regionz<settings.regionsz-1)) { sampledHeight += settings.map.get((long)((float)(x-1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if(z<(16*32)-1||regionz<settings.regionsz-1) { sampledHeight += settings.map.get((long)((float)(x+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if((x<(16*32)-1||regionx<settings.regionsx-1)&&(z<(16*32)-1||regionz<settings.regionsz-1)) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if(x<(16*32)-1||regionx<settings.regionsx-1) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						if((x<(16*32)-1||regionx<settings.regionsx-1)&&(z>0||regionz>0)) { sampledHeight += settings.map.get((long)((float)(x+1+(regionx*32*16))/(float)(settings.mapw+1)*(float)(settings.map.w-1)), (long)((float)(z-1+(regionz*32*15))/(float)(settings.maph+1)*(float)(settings.map.h-1))); samples++; }
-//						height = (int)((float)sampledHeight/(float)samples);
-//					}
-					if(settings.smooth) { height = interpolate((x+(regionx*32*16)), (z+(regionz*32*15)), settings.smoothSize, height, settings); }
-					int biome = settings.biomeMap.getBiome((int)(x+(regionx*32*16)), (int)(z+(regionz*32*15)));
+					int height = settings.map.get((int)(posScaledX*(float)(settings.map.w-1)), (int)(posScaledZ*(float)(settings.map.h-1)));
+					if(settings.smooth) { height = interpolate((x+(regionx*32*16)), (z+(regionz*32*16)), settings.smoothSize, height, settings); }
+					int biome = settings.biomeMap.getBiome((int)(x+(regionx*32*16)), (int)(z+(regionz*32*16)));
 					chunks[getChunkIndex(x, z)].setBiome(x%16, z%16, Chunk.values[biome]);
 					for(int y = 0; y < 256; y++)
 					{
-						if(y==0) { chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 7); }
+						if(y==height+1&&TerrainPopulator.shouldDoTallGrass(x, z, biome)&&y>settings.waterHeight) { TerrainPopulator.setTallGrass(this, x, y, z, biome); }
+						else if(y==0) { chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 7); }
 						else if(y<=height&&y>=height-6) { chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, Chunk.getTopCoverId(biome, height-y, y<=settings.waterHeight)); }
 						else if(y<height) chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 1);
 						else if(y>height) { if(y<=settings.waterHeight) {  if(y==settings.waterHeight&&biome==10){ chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 79); } else {chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 9); chunks[getChunkIndex(x, z)].setBiome(x%16, z%16, Biome.OCEAN);}} else {chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 0); } }
 						//chunks[getChunkIndex(x, z)].setBlock(x%16, y, z%16, 1);
 					}
+					heightmap[x+(z*16*32)] = height;
+					biomes[x+(z*16*32)] = biome;
+					//Old tree generator
+					/* if(height>settings.waterHeight)
+					{
+						//populator.tryGenerateTree(this, x, height, z, biome); //Replacing this SHIT.
+					}*/
 				}
 				else
 				{
@@ -151,7 +152,50 @@ public class Region {
 				}
 			}
 		}
+		//Generate shit
 		TerrainPopulator.populateRegion(this, settings);
+		//Generate trees
+		for(int x = 0; x < 16*32; x++)
+		{
+			for(int z = 0; z < 16*32; z++)
+			{
+				if(!placedAreas[x+(z*32*16)]&&!placedBoxes[x+(z*32*16)]&&heightmap[x+(z*16*32)]>settings.waterHeight)
+				{
+					if(populator.tryGenerateTree(this, x, heightmap[x+(z*16*32)], z, biomes[x+(z*16*32)]))
+					{
+						//TODO - index Z=16*32(512) is not acessed, because index starts at 0. Use (16*32)-1 or 511 instead.
+						placedAreas[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z, 511), 0)*16*32)] = true;
+					
+						placedAreas[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z+1, 511), 0)*16*32)] = true;
+					
+						placedAreas[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x-1, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+						
+						placedAreas[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+						placedBoxes[Util.Max(Util.Min(x+1, 511), 0)+(Util.Max(Util.Min(z-1, 511), 0)*16*32)] = true;
+					
+					}
+				}
+			}
+		}
+		populator.tryGenerateTree(this, 10, 200, 10, 1);
 	}
 	int[] interpolationRange; //Variable to store points to take into count when interpolating
 	public int interpolate(int x, int z, int size, int height, MapGenSettings settings)
@@ -183,7 +227,7 @@ public class Region {
 			int xPos = x+interpolationRange[(i*2)+0];
 			int yPos = z+interpolationRange[(i*2)+1];
 			if(xPos<0||yPos<0||xPos>=settings.mapw||yPos>=settings.maph) continue;
-			sampled += settings.map.get((long)(((float)(xPos)/(float)(settings.mapw+1))*(float)(settings.map.w)), (long)(((float)(yPos)/(float)(settings.maph+1))*(float)(settings.map.h))); 
+			sampled += settings.map.get((int)(((float)(xPos)/(float)(settings.mapw+1))*(float)(settings.map.w)), (int)(((float)(yPos)/(float)(settings.maph+1))*(float)(settings.map.h))); 
 			samples++; 
 		}
 		int toAdd = samples/3;
@@ -213,11 +257,9 @@ public class Region {
 	}
 	public void setBlock(int x, int y, int z, int id)
 	{
-		int chunkx = x/16;
-		int chunkz = z/16;
 		int locx = x%16;
 		int locz = z%16;
-		chunks[chunkx+(chunkz*32)].setBlock(locx, y, locz, id);
+		chunks[getChunkIndex(x, z)].setBlock(locx, y, locz, id);
 	}
 	public void setBlockMetadata(int x, int y, int z, int meta)
 	{
@@ -225,7 +267,7 @@ public class Region {
 		int chunkz = z/16;
 		int locx = x%16;
 		int locz = z%16;
-		chunks[chunkx+(chunkz*32)].setMetadata(locx, y, locz, meta);
+		chunks[getChunkIndex(x, z)].setMetadata(locx, y, locz, meta);
 	}
 	public byte getMetadata(int x, int y, int z)
 	{

@@ -8,6 +8,8 @@ import javax.imageio.ImageIO;
 
 import com.petterroea.gwg.GwgByteFile;
 import com.petterroea.gwg.GwgFile;
+import com.petterroea.mcmapgen.map.BiomeMap;
+import com.petterroea.mcmapgen.map.Map;
 
 /**
  * 
@@ -20,21 +22,20 @@ public class MapGenSettings {
 	public int spawnx, spawnz;
 	public boolean silent = false;
 	public boolean populate = false;
-	public GwgByteFile map;
+	public Map map;
 	public BiomeMap biomeMap;
 	public int waterHeight = 12;
 	public boolean smooth = true;
-	float scale = 1.0f;
+	public float scale = 1.0f;
 	public int smoothSize = 1;
-	float oreGenerationRate = 1.0f;
-	public MapGenSettings(String mapGeometry)
+	public float oreGenerationRate = 1.0f;
+	public MapGenSettings()
 	{
-		try {
-			map = (GwgByteFile)GwgFile.load(new File(mapGeometry));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
+	}
+	public void manualConfigure(String mapGeometry)
+	{
+		map = Map.load(new File(mapGeometry));
 		System.out.println("Do you want the map at original scale");
 		if(Util.yn())
 		{
@@ -126,7 +127,8 @@ public class MapGenSettings {
 			}
 			File file = new File(imageURL);
 			if(!file.exists()) { System.out.println("The image does not exist!"); continue; }
-			settings = new MapGenSettings(imageURL);
+			settings = new MapGenSettings();
+			settings.manualConfigure(imageURL);
 			break;
 		}
 		cont = true;

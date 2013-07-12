@@ -1,26 +1,37 @@
-package com.petterroea.mcmapgen;
+package com.petterroea.mcmapgen.map;
 
 import java.io.File;
 import java.io.IOException;
 
 import com.petterroea.gwg.GwgByteFile;
 import com.petterroea.gwg.GwgFile;
+import com.petterroea.mcmapgen.MapGenSettings;
+import com.petterroea.mcmapgen.Util;
+import com.petterroea.util.TotallyTheUsersFaultException;
 
 public class BiomeMap {
-	private GwgByteFile map;
-	private MapGenSettings settings;
+	public Map map;
+	public MapGenSettings settings;
 	public BiomeMap(MapGenSettings settings)
 	{
 		this.settings = settings;
 		System.out.print("Do you have a biome map? If so, please enter path(Empty for none): ");
 		String in = Util.getInput();
 		File f = new File(in);
-		try {
-			if(f.exists()) map = (GwgByteFile) GwgFile.load(f);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if(f.exists()) 
+		{
+			System.out.println("Loading biome map...");
+			map = Map.load(f);
 		}
+		else
+		{
+			
+		}
+		throw new RuntimeException("File not found");
+	}
+	public BiomeMap()
+	{
+		
 	}
 	public int getBiome(int x, int y)
 	{

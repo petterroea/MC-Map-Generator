@@ -6,10 +6,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import com.petterroea.gwg.GwgConverter;
 import com.petterroea.mcmapgen.MapGenSettings;
 import com.petterroea.mcmapgen.Region;
 import com.petterroea.mcmapgen.Util;
 import com.petterroea.nbt.*;
+import com.petterroea.util.PropertiesFile;
 
 /**
  * Handler used when handling local generation
@@ -17,9 +19,9 @@ import com.petterroea.nbt.*;
  *
  */
 public class SingleFarmHandler implements FarmHandler {
-	private MapGenSettings settings = null;
 	boolean[] regions;
 	public static File saveFolder;
+	private MapGenSettings settings = null;
 	//For level.dat
 	public byte hardcore = (byte)0;
 	public byte features = (byte)0;
@@ -28,12 +30,62 @@ public class SingleFarmHandler implements FarmHandler {
 	public int gameType = 0;
 	public byte allowCommands = (byte)1;
 	public String levelName = "UNTITLED";
-	public static int toDo = 0;
+	private static int toDo = 0;
+	private static int processed = 0;
+	@Override
+	public void setup(PropertiesFile config, MapGenSettings settings) {
+		this.settings = settings;
+		
+		if(!config.containsKey("doEntireMap")) config.setBool("doEntireMap", true);
+		if(!config.containsKey("saveLocation")) config.setString("saveLocation", "world_generated");
+		if(!config.containsKey("hardcoreMode")) config.setBool("hardcoreMode", false);
+		if(!config.containsKey("generateFeatures")) config.setBool("generateFeatures", false);
+		if(!config.containsKey("rain")) config.setBool("rain", false);
+		if(!config.containsKey("thunder")) config.setBool("thunder", false);
+		if(!config.containsKey("creativeMode")) config.setBool("creativeMode", false);
+		if(!config.containsKey("allowCommands")) config.setBool("allowCommands", false);
+		if(!config.containsKey("levelName")) config.setString("levelName", "UNTITLED");
+		
+		
+		int rangeStart = 0;
+		int rangeEnd = settings.regionsx*settings.regionsz;
+		toDo = settings.regionsx*settings.regionsz;
+		if(!config.getBool("doEntireMap"))
+		{
+			rangeStart = config.getInt("rangeStart");
+			rangeEnd = config.getInt("rangeEnd");
+			toDo = rangeEnd-rangeStart;
+		}
+		regions = new boolean[settings.regionsx*settings.regionsz];
+		for(int i = 0; i < regions.length; i++)
+		{
+			if(i>=rangeStart&&i<rangeEnd)
+			{
+				regions[i] = false;
+			}
+			else
+			{
+				regions[i] = true;
+			}
+		}
+		System.out.println("Set up regions.");
+		saveFolder = new File(config.getString("saveLocation"));
+		saveFolder.mkdirs();
+		new File(saveFolder, "region").mkdirs();
+		if(config.getBool("hardcoreMode")) { hardcore=(byte)1; } else { hardcore=(byte)0; }
+		if(config.getBool("generateFeatures")) { features=(byte)1; } else { features=(byte)0; }
+		if(config.getBool("rain")) { raining=(byte)1; } else { raining=(byte)0; }
+		if(config.getBool("thunder")) { thundering=(byte)1; } else { thundering=(byte)0; }
+		if(config.getBool("creativeMode")) { gameType=(byte)1; } else { gameType=(byte)0; }
+		if(config.getBool("allowCommands")) { allowCommands=(byte)1; } else { allowCommands=(byte)0; }
+		levelName = config.getString("levelName");
+	}
 	@Override
 	public void setup() {
 		System.out.println("What is the path to the map file?");
 		String path = Util.getInput();
-		settings = new MapGenSettings(path);
+		settings = new MapGenSettings();
+		settings.manualConfigure(path);
 		System.out.println("Do you want to do the whole thing?");
 		int rangeStart = 0;
 		int rangeEnd = settings.regionsx*settings.regionsz;
@@ -117,17 +169,25 @@ public class SingleFarmHandler implements FarmHandler {
 
 	@Override
 	public Region getRegionToHandle() {
-		for(int i = 0; i < regions.length; i++)
+		synchronized(this)
 		{
-			//System.out.println("Checking region...");
-			//System.out.println(regions[i]);
-			if(regions[i]==false)
+			for(int i = 0; i < regions.length; i++)
 			{
-				regions[i] = true;
-				return new Region(i%settings.regionsx, i/settings.regionsx);
+				//System.out.println("Checking region...");
+				//System.out.println(regions[i]);
+				if(regions[i]==false)
+				{
+					regions[i] = true;
+					return new Region(i%settings.regionsx, i/settings.regionsx);
+				}
 			}
+			if(!finished)
+			{
+				doneGenerating();
+				finished = true;
+			}
+			return null;
 		}
-		return null;
 	}
 
 	@Override
@@ -147,9 +207,8 @@ public class SingleFarmHandler implements FarmHandler {
 		// TODO Auto-generated method stub
 		return settings;
 	}
-
-	@Override
-	public void doneGenerating() {
+	private boolean finished = false;
+	private void doneGenerating() {
 		//Now we need to write the level.dat file
 		TagCompound root = new TagCompound("");
 		TagCompound data = new TagCompound("Data");
@@ -245,5 +304,22 @@ public class SingleFarmHandler implements FarmHandler {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public int toDo() {
+		// TODO Auto-generated method stub
+		return toDo;
+	}
+
+	@Override
+	public int processed() {
+		// TODO Auto-generated method stub
+		return processed;
+	}
+
+	@Override
+	public void doneWithRegion() {
+		processed++;
 	}
 }

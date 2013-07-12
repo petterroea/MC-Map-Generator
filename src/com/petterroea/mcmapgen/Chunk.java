@@ -1,8 +1,10 @@
 package com.petterroea.mcmapgen;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
+import com.petterroea.mcmapgen.client.Model;
 import com.petterroea.nbt.Tag;
 import com.petterroea.nbt.TagByte;
 import com.petterroea.nbt.TagByteArray;
@@ -47,31 +49,65 @@ public class Chunk {
 		JUNGLE,
 		JUNGLE_HILLS
 	}
-	public static int[] tallGrassPerRegion = {
-			0, //Ocean
-			((16*16)-16)*32*32, //Plains
-			(16)*32*32, //Desert
-			((16*16)-(16*12))*32*32, //Extreme hills
-			((16*16)-(16*4))*32*32, //Forest
-			((16*16)-(16*4))*32*32, //Taiga
-			((16*16)-(16*8))*32*32, //Swamp
-			0, //River
-			0, //Nether
-			0, //End
-			0, //Frozen Ocean
-			0, //Frozen River
-			0, //Ice plains
-			0, //Ice mountains
-			0, //Mushroom Island
-			0, //Mushroom island shore
-			0, //Beach
-			(16)*32*32, //Desert hills
-			((16*16)-(16*10))*32*32, //Forest hills
-			((16*16)-(16*10))*32*32, //Taiga hills
-			((16*16)-(16*12))*32*32, //Extreme hills edge
-			((16*16)-(16*4))*32*32, //Jungle
-			((16*16)-(16*10))*32*32, //Jungle hills
-	};
+	public static int[] tallGrassPer100Terrain = {
+		0, //Ocean
+		80, //Plains
+		01, //Desert
+		20, //Extreme hills
+		50, //Forest
+		20, //Taiga
+		30, //Swamp
+		0, //River
+		0, //Nether
+		0, //End
+		0, //Frozen Ocean
+		0, //Frozen River
+		0, //Ice plains
+		0, //Ice mountains
+		20, //Mushroom Island
+		20, //Mushroom island shore
+		0, //Beach
+		1, //Desert hills
+		40, //Forest hills
+		35, //Taiga hills
+		40, //Extreme hills edge
+		60, //Jungle
+		50, //Jungle hills
+};
+	public static int[] treesPer1000Terrain = {
+		0, //Ocean
+		2, //Plains
+		0, //Desert
+		69, //Extreme hills
+		80, //Forest
+		80, //Taiga
+		30, //Swamp
+		0, //River
+		0, //Nether
+		0, //End
+		0, //Frozen Ocean
+		0, //Frozen River
+		0, //Ice plains
+		0, //Ice mountains
+		50, //Mushroom Island
+		50, //Mushroom island shore
+		0, //Beach
+		1, //Desert hills
+		50, //Forest hills
+		69, //Taiga hills
+		80, //Extreme hills edge
+		80, //Jungle
+		70, //Jungle hills
+};
+	public static Model oakTree;
+	public static void preload()
+	{
+		try {
+			oakTree = new Model(new DataInputStream(Chunk.class.getResourceAsStream("oakTree.sbf")));
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 	public static int getTopCoverId(int biome, int yFromTop, boolean underWater)
 	{
 		switch(biome)
@@ -82,12 +118,26 @@ public class Chunk {
 			if(yFromTop<4) { return 12; } else { return 24; }
 		case 17:
 			if(yFromTop<4) { return 12; } else { return 24; }
+			/*
 		case 12:
 			if(underWater) { return 79; } else { if(yFromTop==0) { return 78; } else if(yFromTop<3) { return 79; } else { return 79; } }
 		case 13:
 			if(underWater) { return 79; } else { if(yFromTop==0) { return 78; } else if(yFromTop<3) { return 79; } else { return 79; } }
+			*/
+		case 12:
+			if(underWater) { return 79; } else { if(yFromTop==0) { return 79; } else if(yFromTop<3) { return 79; } else { return 79; } }
+		case 13:
+			if(underWater) { return 79; } else { if(yFromTop==0) { return 79; } else if(yFromTop<3) { return 79; } else { return 79; } }
 		default:
 			if(yFromTop==0) { return 2; } else { return 3; }
+		}
+	}
+	public static Model getTree(int biome)
+	{
+		switch(biome)
+		{
+			default:
+				return oakTree;
 		}
 	}
 	public Chunk(int chunkx, int chunkz)

@@ -32,9 +32,16 @@ public abstract class GwgFile {
 		if(format==STORAGE_BYTE)
 		{
 			GwgByteFile f = new GwgByteFile(w, h);
+			long precentageMark = (w*h)/50L;
 			for(long l = 0; l < w*h; l++)
 			{
 				f.set(l, is.readByte());
+				if(l%precentageMark==0&&l!=0)
+				{
+					double precentage = (double)l/(double)(w*h);
+					precentage = precentage * 100.0D;
+					System.out.println("Read " + l + " bytes, " + precentage + "% done.");
+				}
 			}
 			is.close();
 			return f;

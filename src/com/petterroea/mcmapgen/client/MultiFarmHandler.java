@@ -2,6 +2,7 @@ package com.petterroea.mcmapgen.client;
 
 import com.petterroea.mcmapgen.MapGenSettings;
 import com.petterroea.mcmapgen.Region;
+import com.petterroea.util.PropertiesFile;
 
 /**
  * Farm handler used for multi-instance(When you have connected to a server)
@@ -35,7 +36,25 @@ public class MultiFarmHandler implements FarmHandler {
 	}
 
 	@Override
-	public void doneGenerating() {
+	public int toDo() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int processed() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void doneWithRegion() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setup(PropertiesFile config, MapGenSettings settings) {
 		// TODO Auto-generated method stub
 		
 	}
