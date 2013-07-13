@@ -10,6 +10,8 @@ Compile like any normal Java project
 REQUIRES
 -------------
 
+You need PetUtils from my other git repo called PetUtils. Download the jar and add it as external jar.
+
 You need to download Mojangs anvil converter and use it as external jar from here:
 
 http://mojang.com/2012/02/new-minecraft-map-format-anvil/
